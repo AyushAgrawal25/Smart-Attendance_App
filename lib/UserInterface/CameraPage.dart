@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:attendance_app/State/CameraState.dart';
+import 'package:attendance_app/UserInterface/PreviewPage.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:video_thumbnail/video_thumbnail.dart' as vid;
 
 // TODO: Once recorded navigate it to other page.
 // Give a feature to re-record the video.
@@ -34,14 +36,66 @@ class _CameraPageState extends State<CameraPage> {
       if (e is CameraException) {
         switch (e.code) {
           case 'CameraAccessDenied':
-            print('User denied camera access.');
+            // TODO: throw error.
             break;
           default:
-            print('Handle other errors.');
+            // TODO: throw error.
             break;
         }
       }
     });
+  }
+
+  void startRecording() {
+    _controller.startVideoRecording();
+  }
+
+  Future<String> getExternalStoragePath() async {
+    PermissionStatus permissionStatus = PermissionStatus.denied;
+    while (permissionStatus == PermissionStatus.denied) {
+      permissionStatus = await Permission.storage.request();
+    }
+
+    final Directory extDir = (await getExternalStorageDirectory())!;
+    final String dirPath = '${extDir.path}/Movies';
+    Directory(dirPath).createSync(recursive: true);
+
+    return dirPath;
+  }
+
+  Future<String?> createThumbnail(String videoPath, String dirPath) async {
+    String? thumbnailPath = await vid.VideoThumbnail.thumbnailFile(
+      video: videoPath,
+      thumbnailPath: dirPath,
+      imageFormat: vid.ImageFormat.JPEG,
+      maxHeight: 128,
+      quality: 75,
+    );
+
+    return thumbnailPath;
+  }
+
+  Future<void> stopRecording() async {
+    XFile videoPath = await _controller.stopVideoRecording();
+    String path = videoPath.path;
+
+    // Save this video to external directory
+    String extDirPath = await getExternalStoragePath();
+    String fileName = path.split('/').last;
+    String newPath = '$extDirPath/$fileName';
+    File(path).copySync(newPath);
+
+    // Delete the video from internal storage
+    File(path).deleteSync();
+
+    // Create a thumbnail of the video
+    String? thumbnailPath = await createThumbnail(newPath, extDirPath);
+
+    // Navigate to the preview page
+    // ignore: use_build_context_synchronously
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return PreviewPage(videoPath: newPath, thumbnailPath: thumbnailPath);
+    }));
   }
 
   @override
@@ -55,37 +109,6 @@ class _CameraPageState extends State<CameraPage> {
           child: CircularProgressIndicator(),
         ),
       );
-    }
-
-    void startRecording() {
-      _controller.startVideoRecording();
-    }
-
-    Future<String> getExternalStoragePath() async {
-      PermissionStatus permissionStatus = PermissionStatus.denied;
-      while (permissionStatus == PermissionStatus.denied) {
-        permissionStatus = await Permission.storage.request();
-      }
-
-      final Directory extDir = (await getExternalStorageDirectory())!;
-      final String dirPath = '${extDir.path}/Movies';
-      Directory(dirPath).createSync(recursive: true);
-
-      return dirPath;
-    }
-
-    Future<void> stopRecording() async {
-      XFile videoPath = await _controller.stopVideoRecording();
-      String path = videoPath.path;
-
-      // Save this video to external directory
-      String extDirPath = await getExternalStoragePath();
-      String fileName = path.split('/').last;
-      String newPath = '$extDirPath/$fileName';
-      File(path).copySync(newPath);
-
-      // Delete the video from internal storage
-      File(path).deleteSync();
     }
 
     return Scaffold(

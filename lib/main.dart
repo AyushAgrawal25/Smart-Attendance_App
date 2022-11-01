@@ -1,11 +1,15 @@
 import 'package:attendance_app/State/CameraState.dart';
 import 'package:attendance_app/UserInterface/CameraPage.dart';
+import 'package:attendance_app/constants.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeCameras();
+
+  // Remove it once deployed
+  isLocal = true;
   runApp(const MyApp());
 }
 
