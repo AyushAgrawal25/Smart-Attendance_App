@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:attendance_app/State/CameraState.dart';
+import 'package:attendance_app/UserInterface/ImagePreviewPage.dart';
 import 'package:attendance_app/UserInterface/PreviewPage.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -98,6 +99,22 @@ class _CameraPageState extends State<CameraPage> {
     }));
   }
 
+  onCaptureButtonPressed() async {
+    // Code for capturing image
+    XFile imagePath = await _controller.takePicture();
+    String path = imagePath.path;
+
+    // Save this image to external directory
+    String extDirPath = await getExternalStoragePath();
+    String fileName = path.split('/').last;
+    String newPath = '$extDirPath/$fileName';
+    File(path).copySync(newPath);
+
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return ImagePreviewPage(imagePath: newPath);
+    }));
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_controller.value.isInitialized) {
@@ -118,17 +135,25 @@ class _CameraPageState extends State<CameraPage> {
       body: Stack(
         children: [
           CameraPreview(_controller),
-          Container(
-            // Create a cirular button to take a picture
-            alignment: Alignment.bottomCenter,
-            padding: const EdgeInsets.only(bottom: 20),
-            child: VideoRecordButton(
-              onTapDown: startRecording,
-              onTapUp: stopRecording,
-            ),
-          ),
+          // Container(
+          //   // Create a cirular button to take a picture
+          //   alignment: Alignment.bottomCenter,
+          //   padding: const EdgeInsets.only(bottom: 20),
+          //   child: VideoRecordButton(
+          //     onTapDown: startRecording,
+          //     onTapUp: stopRecording,
+          //   ),
+          // ),
 
           // TODO: Print a recording gesture at top.
+
+          Container(
+            alignment: Alignment.bottomCenter,
+            padding: const EdgeInsets.only(bottom: 20),
+            child: CaptureButton(
+              onTap: onCaptureButtonPressed,
+            ),
+          ),
         ],
       ),
     );
@@ -180,6 +205,43 @@ class _VideoRecordButtonState extends State<VideoRecordButton> {
           borderRadius: BorderRadius.circular(50),
         ),
         padding: EdgeInsets.all((isPressed) ? 10 : 15),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.red,
+            borderRadius: BorderRadius.circular(50),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class CaptureButton extends StatefulWidget {
+  final Function onTap;
+  const CaptureButton({
+    Key? key,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  State<CaptureButton> createState() => _CaptureButtonState();
+}
+
+class _CaptureButtonState extends State<CaptureButton> {
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        widget.onTap();
+      },
+      child: Container(
+        height: 65,
+        width: 65,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(50),
+        ),
+        padding: const EdgeInsets.all(15),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.red,
