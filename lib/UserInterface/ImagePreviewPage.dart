@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:attendance_app/BusinesLogic/AttendanceServices.dart';
+import 'package:attendance_app/State/AttendanceResult.dart';
 import 'package:attendance_app/UserInterface/AttendancePage.dart';
 import 'package:flutter/material.dart';
 
@@ -18,12 +19,31 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
     setState(() {
       isLoading = true;
     });
-    bool uploadStatus = await AttendanceServices.uploadImage(imagePath);
+    AttendanceResult? result = await AttendanceServices.uploadImage(imagePath);
+    if (result == null) {
+      setState(() {
+        isLoading = false;
+      });
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error uploading image'),
+        ),
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => AttendancePage(
+            lables: result.lables,
+            probabilities: result.probabilities,
+          ),
+        ),
+      );
+    }
 
     setState(() {
       isLoading = false;
     });
-    return uploadStatus;
   }
 
   tempUpload(String imagePath) async {
@@ -86,12 +106,8 @@ class _ImagePreviewPageState extends State<ImagePreviewPage> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    // bool uploadStatus = await uploadImage(widget.imagePath);
-                    // if (uploadStatus) {
-                    //   Navigator.pop(context);
-                    // }
-
-                    tempUpload(widget.imagePath);
+                    uploadImage(widget.imagePath);
+                    // tempUpload(widget.imagePath);
                   },
                   child: const Text('Upload'),
                 ),
